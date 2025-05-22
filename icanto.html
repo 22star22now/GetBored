@@ -5,9 +5,9 @@
   <title>Smart AI Search</title>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-    input, button { padding: 10px; font-size: 16px; width: 300px; }
+    input, button { padding: 10px; font-size: 16px; width: 300px; margin-bottom: 10px; }
     #response { margin-top: 20px; background: white; padding: 15px; border-radius: 5px; }
-    #recent { margin-top: 10px; }
+    #recent { margin-top: 20px; }
     #recent div { cursor: pointer; color: blue; margin: 5px 0; }
     #recent div:hover { text-decoration: underline; }
     a { color: blue; }
@@ -38,7 +38,7 @@
     const responseDiv = document.getElementById('response');
     const recentList = document.getElementById('recentList');
 
-    // Check for saved API key
+    // Load saved API key
     let apiKey = localStorage.getItem('openai_api_key');
     if (apiKey) {
       apiKeyBox.style.display = 'none';
@@ -77,7 +77,7 @@
       const isQuestion = query.endsWith('?');
       const prompt = isQuestion
         ? `Answer the question: ${query}`
-        : `If someone types "${query}", suggest relevant clickable website links (use Markdown format like [Google](https://www.google.com)).`;
+        : `If someone types "${query}", suggest relevant clickable website links. Format using Markdown like [YouTube](https://www.youtube.com).`;
 
       try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -87,18 +87,24 @@
             "Authorization": `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: "gpt-4",
+            model: "gpt-3.5-turbo", // Change to "gpt-4" if you have access
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7
           })
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "No response.";
-        const htmlReply = reply.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        responseDiv.innerHTML = htmlReply.replace(/\n/g, "<br>");
+
+        if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+          const reply = data.choices[0].message.content;
+          const htmlReply = reply.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+          responseDiv.innerHTML = htmlReply.replace(/\n/g, "<br>");
+        } else {
+          console.error("Full API response:", data);
+          responseDiv.innerHTML = "Error: " + (data.error?.message || "Unknown issue.");
+        }
       } catch (err) {
-        responseDiv.innerHTML = "Error: " + err.message;
+        responseDiv.innerHTML = "Fetch Error: " + err.message;
       }
     }
 
